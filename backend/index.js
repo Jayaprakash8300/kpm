@@ -3,19 +3,19 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv").config();
 const Stripe = require('stripe')
-
+const jwt = require("jsonwebtoken")
+const paypal = require("paypal-rest-sdk");
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 8000;
 
 //mongodb connection
 mongoose.set("strictQuery", false);
 mongoose
   .connect(process.env.MONGODB_URL)
   .then(() => console.log("Connect to Databse"))
-  .catch((err) => console.log(err));
 
 //schema
 const userSchema = mongoose.Schema({
@@ -29,7 +29,10 @@ const userSchema = mongoose.Schema({
   confirmPassword: String,
   image: String,
 });
-
+generateAuthToken = (result)=>{
+  const token = jwt.sign({_id:result._id},process.env.secretkey);
+  return token
+};
 //
 const userModel = mongoose.model("user", userSchema);
 
@@ -43,21 +46,17 @@ app.post("/signup", async (req, res) => {
   // console.log(req.body);
   const { email } = req.body;
 
-  userModel.findOne({ email: email }, (err, result) => {
-    // console.log(result);
-    console.log(err);
-    if (result) {
+  const user = userModel.findOne({ email: email })
+    if(user){
       res.send({ message: "Email id is already register", alert: false });
-    } else {
-      const data = userModel(req.body);
-      const save = data.save();
-      res.send({ message: "Successfully sign up", alert: true });
     }
-  });
-});
-
+    const data = userModel(req.body).save
+    
+      res.status(202).json({ message: "Successfully sign up", alert: true });
+    }
+)
 //api login
-app.post("/login", (req, res) => {
+app.post("/login",async (req, res) => {
   // console.log(req.body);
   const { email } = req.body;
   userModel.findOne({ email: email }, (err, result) => {
@@ -69,11 +68,12 @@ app.post("/login", (req, res) => {
         email: result.email,
         image: result.image,
       };
-      console.log(dataSend);
+      
       res.send({
         message: "Login is successfully",
         alert: true,
         data: dataSend,
+        token:generateAuthToken(result)
       });
     } else {
       res.send({
@@ -112,56 +112,56 @@ app.get("/product",async(req,res)=>{
   res.send(JSON.stringify(data))
 })
  
-/*****payment getWay */
-console.log(process.env.STRIPE_SECRET_KEY)
 
+//paypal payment
 
-const stripe  = new Stripe(process.env.STRIPE_SECRET_KEY)
+paypal.configure({
+  'mode': 'sandbox', //sandbox or live
+  'client_id': 'AXXDUHnaCj6rLyi1qN9Gg5K2JQ-k_ICFbhmIE-rDTiEwzAs-0kpukX3TA0GWUr8ndrn8VRvjhqIU-rm3',
+  'client_secret': 'EFBiBA5H2jef6zRExxHXFVRMrVlW1CcCH6QLD0cN_qiyOzPKJd2NTCU6CWb4kKvBWykykLaLAZ76SOql'
+});
+app.post("/pay",async(req,res)=>{
+const data = req.body;
 
-app.post("/create-checkout-session",async(req,res)=>{
+  var create_payment_json = {
 
-     try{
-      const params = {
-          submit_type : 'pay',
-          mode : "payment",
-          payment_method_types : ['card'],
-          billing_address_collection : "auto",
-          shipping_options : [{shipping_rate : "shr_1N0qDnSAq8kJSdzMvlVkJdua"}],
+    "intent": "sale",
+    "payer": {
+        "payment_method": "paypal"
+    },
+    "redirect_urls": {
+        "return_url": "http://localhost:3000/success",
+        "cancel_url": "http://localhost:3000/cancel"
+    },
+    "transactions": [{
+        "item_list": {
+            "items": [{
+                "name": data.name,
+                "sku": "001",
+                "price": data.price,
+                "currency": "USD",
+                "quantity": data.qty
+            }]
+        },
+        "amount": {
+            "currency": "USD",
+            "total": data.price
+        },
+        "description": data.description
+    }]
+};
 
-          line_items : req.body.map((item)=>{
-            return{
-              price_data : {
-                currency : "inr",
-                product_data : {
-                  name : item.name,
-                  // images : [item.image]
-                },
-                unit_amount : item.price * 100,
-              },
-              adjustable_quantity : {
-                enabled : true,
-                minimum : 1,
-              },
-              quantity : item.qty
-            }
-          }),
-
-          success_url : `${process.env.FRONTEND_URL}/success`,
-          cancel_url : `${process.env.FRONTEND_URL}/cancel`,
-
+paypal.payment.create(create_payment_json, function (error, payment) {
+  if (error) {
+      throw error;
+  } else {
+      for(let i=0; i< payment.links.lenth;i++){
+        if(payment/links[i].rel==="approval_url"){
+          res.redirect(payment.links[i].href)
+        }
       }
-
-      
-      const session = await stripe.checkout.sessions.create(params)
-      // console.log(session)
-      res.status(200).json(session.id)
-     }
-     catch (err){
-        res.status(err.statusCode || 500).json(err.message)
-     }
-
+  }
+});
 })
-
-
 //server is ruuning
 app.listen(PORT, () => console.log("server is running at port : " + PORT));

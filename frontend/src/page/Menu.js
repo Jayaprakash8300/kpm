@@ -27,6 +27,7 @@ const Menu = () => {
           <img
             src={productDisplay.image}
             className="hover:scale-105 transition-all h-full"
+            alt=""
           />
         </div>
         <div className="flex flex-col gap-1">
@@ -35,7 +36,7 @@ const Menu = () => {
           </h3>
           <p className=" text-slate-500  font-medium text-2xl">{productDisplay.category}</p>
           <p className=" font-bold md:text-2xl">
-            <span className="text-red-500 ">₹</span>
+            <span className="text-red-500 ">$</span>
             <span>{productDisplay.price}</span>
           </p>
           <div className="flex gap-3">

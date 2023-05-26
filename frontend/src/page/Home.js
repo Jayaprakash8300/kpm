@@ -1,38 +1,13 @@
-import React, { useEffect, useRef, useState } from "react";
+import React from "react";
 import { useSelector } from "react-redux";
-import CardFeature from "../component/CardFeature";
 import HomeCard from "../component/HomeCard";
-import { GrPrevious, GrNext } from "react-icons/gr";
-import FilterProduct from "../component/FilterProduct";
 import AllProduct from "../component/AllProduct";
 
 
 const Home = () => {
   const productData = useSelector((state) => state.product.productList);
   const homeProductCartList = productData.slice(1, 5);
-  const homeProductCartListVegetables = productData.filter(
-    (el) => el.category === "vegetable",
-    []
-  );
   const loadingArray = new Array(4).fill(null);
-  const loadingArrayFeature = new Array(10).fill(null);
-
-  const slideProductRef = useRef();
-  const nextProduct = () => {
-    slideProductRef.current.scrollLeft += 200;
-  };
-  const preveProduct = () => {
-    slideProductRef.current.scrollLeft -= 200;
-  };
-
-
- 
-
-
-  
-
-
-
   return (
     <div className="p-2 md:p-4">
       <div className="md:flex gap-4 py-2">
@@ -42,6 +17,7 @@ const Home = () => {
             <img
               src="https://cdn-icons-png.flaticon.com/512/2972/2972185.png"
               className="h-7"
+              alt=""
             />
           </div>
           <h2 className="text-4xl md:text-7xl font-bold py-3">
@@ -79,7 +55,7 @@ const Home = () => {
               })}
         </div>
       </div>
-
+{/*       
       <div className="">
         <div className="flex w-full items-center">
           <h2 className="font-bold text-2xl text-slate-800 mb-4">
@@ -121,7 +97,7 @@ const Home = () => {
                 <CardFeature loading="Loading..." key={index+"cartLoading"} />
               ))}
         </div>
-      </div>
+      </div> */}
       
       <AllProduct heading={"Your Product"}/>
     </div>
